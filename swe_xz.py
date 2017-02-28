@@ -9,7 +9,7 @@ class SweXZProblem:
     """
     class to store parameters for swe_xz model run
     """
-    def __init__(self, L, D, t_max, N_i, N_k, Dt, h_initial=None):
+    def __init__(self, L, D, t_max, N_i, N_k, Dt, hydrostatic=False, h_initial=None):
         """
         set parameter values
         """
@@ -38,6 +38,8 @@ class SweXZProblem:
         self.t = np.arange(0, t_max+Dt, Dt)
         ## bathymetry
         self.d = D * np.ones_like(self.xc)
+        ## is the problem hydrostatic?
+        self.hydrostatic = hydrostatic
         ## free surface initial condition
         if h_initial is None:
             ## vector of same length as cell centered x grid
@@ -48,9 +50,16 @@ class SweXZProblem:
     def set_h_initial(self, h_initial):
         self.h_initial = h_initial
 
+def calc_A_plus():
+    """
+    A_plus is an N_i+1 by N_k matrix containing explicit data
+    for the u velocity field update 
+    """
+    pass
+
 def calc_S():
     """
-    S is an N_i by N_k matrix containing explicit data
+    S is an N_i+1 by N_k matrix containing explicit data
     for the u velocity field update 
     """
     pass
@@ -110,45 +119,51 @@ def run_swe_xz_problem(p):
     all vectorized grids are stored row major 
     """
     ## number of points to store for u and w velocity fields
-    n_f = (p.N_i + 1) * (p.N_k + 1)
+    n_fx = (p.N_i + 1) * p.N_k
+    n_fz = p.N_i * (p.N_k + 1)
     ## number of grid points to store for q non-hydrostatic pressure field
     n_c = p.N_i * p.N_k 
     ## initialize vectors
     h = p.h_initial.copy()
-    u = np.zeros(n_f)
-    w = np.zeros(n_f)
-    q = np.zeros(n_c)
+    u = np.zeros((p.N_i+1, p.N_k))
+    w = np.zeros((p.N_i, p.N_k+1))
+    q = np.zeros((p.N_i, p.N_k))
     u_str = np.zeros_like(u)
     w_str = np.zeros_like(w)
     q_c = np.zeros_like(q)
-    u_new = np.zeros_like(u)
-    w_new = np.zeros_like(w)
-    q_new = np.zeros_like(q)
-    h_new = np.zeros_like(h)
+    A_p = np.zeros_like(u)
+    S = np.zeros_like(u) 
     ## time loop starting at t_ = p.Dt
     for t_ in p.t[1:]:
         ## cell centered H
         H_c = h + p.d
         ## explicit update data for u (a)
+        A_p = calc_A_plus()
         S = calc_S()
         ## LHS and RHS for free surface system (b)
         RHS_h = calc_RHS_freesurface()
         LHS_h = construct_LHS_freesurface()
         ## solve for free surface (c)
         h_new = scipy.linalg.solve(LHS_h, RHS_h)
-        ## update predictor velocity fields using old q (d)
-        u_str = predict_u_velocity(q)
-        w_str = predict_w_velocity(q)
-        ## LHS, RHS for pressure field
-        RHS_q = calc_RHS_pressure()
-        LHS_q = construct_LHS_pressure()
-        ## use CG to solve for q
-        q_c = CG_solve(LHS_q, RHS_q)
-        ## correct predicted u and w velocity fields
-        u_new = update_u_velocity()
-        w_new = update_w_velocity()
-        ## update nonhydrostatic pressure
-        q += q_c
+        ## hydrostatic: q = 0
+        if p.hydrostatic:
+            u = predict_u_velocity(q)
+            w = predict_w_velocity(q)
+        ## non hydrostatic q
+        else:
+            ## update predictor velocity fields using old q (d)
+            u_str = predict_u_velocity(q)
+            w_str = predict_w_velocity(q)
+            ## LHS, RHS for pressure field
+            RHS_q = calc_RHS_pressure()
+            LHS_q = construct_LHS_pressure()
+            ## use CG to solve for q_c and update nonhydrostatic pressure
+            q_c = CG_solve(LHS_q, RHS_q)
+            q += q_c
+            ## correct predicted u and w velocity fields
+            u = update_u_velocity()
+            w = update_w_velocity()
+
 
 
 
