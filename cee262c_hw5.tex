@@ -1,0 +1,176 @@
+\documentclass[12pt]{article}
+
+% for lettered subsections
+\renewcommand\thesubsection{\alph{subsection}}
+% for roman numeralled subsubsections
+\renewcommand\thesubsubsection{\roman{subsubsection}}
+
+% for margins
+\usepackage[margin=0.75in]{geometry}
+
+% for figures...
+\usepackage{graphicx}
+
+% for split environment and cases
+\usepackage{amsmath} 
+\usepackage{amsfonts}
+
+% for \FloatBarrier to keep figs in sections
+\usepackage[section]{placeins}
+
+% color text
+\usepackage{color}
+
+% for tables
+\usepackage{tabularx, caption}
+
+% for tilde 
+\usepackage{textcomp}
+\newcommand{\textapprox}{\raisebox{0.5ex}{\texttildelow}}
+
+% scientific notation, units
+\usepackage{siunitx}
+
+\title{CEE262c HW5}  
+\author{Brent Lunghino\\lunghino@stanford.edu}
+
+\begin{document}
+    
+\maketitle
+
+In this assignment we work with the 2D-V linearized shallow water equations:
+
+\begin{equation} \label{eq:swe_x_momentum}
+\frac{\partial u}{\partial t} = -g \frac{\partial h}{\partial x} - \frac{\partial q}{\partial x}
+\end{equation}
+
+\begin{equation} \label{eq:swe_z_momentum}
+\frac{\partial w}{\partial t} = -\frac{\partial q}{\partial z}
+\end{equation}
+
+\begin{equation} \label{eq:swe_continuity}
+\frac{\partial h}{\partial t} = -\frac{\partial}{\partial x} \int_{-D}^{0} u~ dz
+\end{equation}
+
+% q1
+\section{}
+
+Each term in (\ref{eq:swe_x_momentum}) is discretized as follows:
+
+\begin{equation*}
+\frac{\partial u}{\partial t} = \frac{u_{i,k}^{n+1} - u_{i,k}^*}{\Delta t} + \frac{u_{i,k}^* - u_{i,k}^n}{\Delta t}
+\end{equation*}
+
+\begin{equation*}
+-g \frac{\partial h}{\partial x} = - \frac{g \theta}{\Delta x} (h_{i}^{n+1}-h_{i-1}^{n+1}) - \frac{g (1-\theta)}{\Delta x} (h_{i}^n - h_{i-1}^n)
+\end{equation*} 
+
+\begin{equation*}
+- \frac{\partial q}{\partial x} = -\frac{q_{i,k}^c - q_{i-1,k}^c}{\Delta x} - \frac{q_{i,k}^{n-1/2} - q_{i-1,k}^{n-1/2}}{\Delta x}
+\end{equation*}
+
+Where the pressure field is to be updated as:
+
+\begin{equation*} \label{eq:pressure_update}
+q_{i,k}^{n+1/2} = q_{i,k}^c + q_{i,k}^{n-1/2}
+\end{equation*}
+
+And define $u^*$ such that:
+
+\begin{equation} \label{eq:u-velocity_pressure_correction}
+\frac{u_{i,k}^{n+1} - u_{i,k}^*}{\Delta t} = -\frac{q_{i,k}^c - q_{i-1,k}^c}{\Delta x} 
+\end{equation}
+
+Using the above discretizations in (\ref{eq:swe_x_momentum}) and subtracting (\ref{eq:u-velocity_pressure_correction}):
+
+\begin{equation*}
+\frac{u_{i,k}^* - u_{i,k}^n}{\Delta t} = - \frac{g \theta}{\Delta x} (h_{i}^{n+1}-h_{i-1}^{n+1}) - \frac{g (1-\theta)}{\Delta x} (h_{i}^n - h_{i-1}^n) - \frac{1}{\Delta x} (q_{i,k}^{n-1/2} - q_{i-1,k}^{n-1/2})
+\end{equation*}
+
+\begin{equation} \label{eq:u_predictor_velocity}
+u_{i,k}^* = S_{i,k} - \frac{g \theta \Delta t}{\Delta x} (h_{i}^{n+1} - h_{i-1}^{n+1})
+\end{equation}
+
+In (\ref{eq:u_predictor_velocity}), $S_{i,k}$ is given by:
+
+\begin{equation*}
+S_{i,k} = u_{i,k}^n - \frac{g \Delta t (1-\theta)}{\Delta x} (h_{i}^n - h_{i-1}^n) - \frac{\Delta t}{\Delta x} (q_{i,k}^{n-1/2} - q_{i-1,k}^{n-1/2})
+\end{equation*}
+
+To discretize (\ref{eq:swe_z_momentum}) we use the same pressure update given by (\ref{eq:pressure_update}) and discretize each term as follows:
+
+\begin{equation*}
+\frac{\partial w}{\partial t} = \frac{w_{i,k}^{n+1} - w_{i,k}^*}{\Delta t} + \frac{w_{i,k}^* - w_{i,k}^n}{\Delta t}
+\end{equation*}
+
+\begin{equation*}
+- \frac{\partial q}{\partial z} = -\frac{q_{i,k}^c - q_{i,k-1}^c}{\Delta z} - \frac{q_{i,k}^{n-1/2} - q_{i,k-1}^{n-1/2}}{\Delta z}
+\end{equation*}
+
+Define
+
+\begin{equation} \label{eq:w-velocity_pressure_correction}
+\frac{w_{i,k}^{n+1} - w_{i,k}^*}{\Delta t} = -\frac{q_{i,k}^c - q_{i,k-1}^c}{\Delta z} 
+\end{equation}
+
+Plugging the above discretizations into (\ref{eq:swe_z_momentum}) and subtracting (\ref{eq:w-velocity_pressure_correction}):
+
+\begin{equation*}
+\frac{w_{i,k}^* - w_{i,k}^n}{\Delta t} = - \frac{q_{i,k}^{n-1/2} - q_{i,k-1}^{n-1/2}}{\Delta z}
+\end{equation*}
+
+\begin{equation} \label{eq:w_predictor_velocity}
+w_{i,k}^* = w_{i,k}^n - \frac{\Delta t}{\Delta z} (q_{i,k}^{n-1/2} - q_{i,k-1}^{n-1/2})
+\end{equation}
+
+To discretize (\ref{eq:swe_continuity}) we discretize each term as follows
+
+\begin{equation*}
+\frac{\partial h}{\partial t} = \frac{h_{i}^{n+1} - h_i^n}{\Delta t}
+\end{equation*}
+
+\begin{align*}
+-\frac{\partial}{\partial x} \int_{-D}^{0} u~ dz &= - \theta  \frac{\partial}{\partial x} \int_{-D}^{0} u^*~ dz - (1-\theta) \frac{\partial}{\partial x} \int_{-D}^{0} u^n~ dz
+\\
+ &= - \theta  \frac{\partial}{\partial x} \sum_{k=1}^{N_k} u_{i,k}^* \Delta z - (1-\theta) \frac{\partial}{\partial x} \sum_{k=1}^{N_k} u_{i,k}^n \Delta z
+\\
+ &= - \frac{\theta \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
+\end{align*}
+
+Equation (\ref{eq:swe_continuity}) becomes:
+
+\begin{equation*}
+\frac{h_{i}^{n+1} - h_i^n}{\Delta t} = - \frac{\theta \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
+\end{equation*}
+
+\begin{equation*}
+h_{i}^{n+1} = h_i^n - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
+\end{equation*}
+
+Substituting in (\ref{eq:u_predictor_velocity}) for $u^*$:
+
+\begin{multline*}
+h_{i}^{n+1} = h_i^n  - \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n) ...
+\\ 
+- \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} \left( S_{i+1,k} - \frac{g \theta \Delta t}{\Delta x} (h_{i+1}^{n+1} - h_{i}^{n+1}) - S_{i,k} - \frac{g \theta \Delta t}{\Delta x} (h_{i}^{n+1} - h_{i-1}^{n+1}) \right)
+\end{multline*}
+
+\begin{multline*}
+h_{i}^{n+1} - \frac{\theta \Delta t D}{\Delta x} \left(\frac{g \theta \Delta t}{\Delta x} (h_{i+1}^{n+1} - h_{i}^{n+1}) - \frac{g \theta \Delta t}{\Delta x} (h_{i}^{n+1} - h_{i-1}^{n+1}) \right) ... 
+\\= h_i^n  - \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} ( S_{i+1,k} - S_{i,k} )
+\end{multline*}
+
+
+% q2
+\section{}
+
+% q3
+\section{}
+
+% q4
+\section{}
+
+% q5
+\section{}
+
+\end{document}

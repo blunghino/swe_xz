@@ -9,7 +9,7 @@ class SweXZProblem:
     """
     class to store parameters for swe_xz model run
     """
-    def __init__(self, L, D, t_max, N_i, N_k, Dt, hydrostatic=False, h_initial=None):
+    def __init__(self, L, D, t_max, N_i, N_k, Dt, hydrostatic=True, h_initial=None):
         """
         set parameter values
         """
@@ -49,13 +49,6 @@ class SweXZProblem:
 
     def set_h_initial(self, h_initial):
         self.h_initial = h_initial
-
-def calc_A_plus():
-    """
-    A_plus is an N_i+1 by N_k matrix containing explicit data
-    for the u velocity field update 
-    """
-    pass
 
 def calc_S():
     """
@@ -138,7 +131,6 @@ def run_swe_xz_problem(p):
         ## cell centered H
         H_c = h + p.d
         ## explicit update data for u (a)
-        A_p = calc_A_plus()
         S = calc_S()
         ## LHS and RHS for free surface system (b)
         RHS_h = calc_RHS_freesurface()
