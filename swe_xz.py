@@ -89,6 +89,8 @@ def calc_RHS_pressure():
 
 def construct_LHS_pressure(Dx, Dz, N_i, N_k):
     """
+    returns a scipy.sparse.csr_matrix
+
     construct the Laplacian operator used to solve for the 
     non-hydrostatic pressure correction 
     """
@@ -102,40 +104,41 @@ def construct_LHS_pressure(Dx, Dz, N_i, N_k):
     val = np.zeros(5*n_q, dtype=float)
     row = np.zeros(5*n_q, dtype=int)
     col = np.zeros(5*n_q, dtype=int)
-    idx = 0
+    ctr = 0
     for i in range(N_i):
         for k in range(N_k):
+            idx = i * N_k + k 
             if k == N_k-1:
-                row[idx] = i
-                col[idx] = k
-                val[idx] = - 2 * ooDx2 - 3 * ooDz2
-                idx += 1
+                row[ctr] = idx
+                col[ctr] = idx
+                val[ctr] = - 2 * ooDx2 - 3 * ooDz2
+                ctr += 1
             else:
-                row[idx] = i
-                col[idx] = k
-                val[idx] = diag
-                idx += 1
+                row[ctr] = idx
+                col[ctr] = idx
+                val[ctr] = diag
+                ctr += 1
             if i != 0:
-                row[idx] = i
-                col[idx] = k - N_k
-                val[idx] = ooDx2
-                idx += 1
+                row[ctr] = idx
+                col[ctr] = idx - N_k
+                val[ctr] = ooDx2
+                ctr += 1
             if i != N_i-1:
-                row[idx] = i
-                col[idx] = k + N_k 
-                val[idx] = ooDx2
-                idx += 1
-            if k != 0
-                row[idx] = i 
-                col[idx] = k - 1
-                val[idx] = ooDz2
-                idx += 1
+                row[ctr] = idx
+                col[ctr] = idx + N_k 
+                val[ctr] = ooDx2
+                ctr += 1
+            if k != 0:
+                row[ctr] = idx 
+                col[ctr] = idx - 1
+                val[ctr] = ooDz2
+                ctr += 1
             if k != N_k-1:
-                row[idx] = i
-                col[idx] = k + 1
-                val[idx] = ooDz2
-                idx += 1
-    return coo_matrix((val, (row,col)), shape=(N_i,N_k)).tocsr()
+                row[ctr] = idx
+                col[ctr] = idx + 1
+                val[ctr] = ooDz2
+                ctr += 1
+    return coo_matrix((val, (row,col)), shape=(n_q,n_q)).tocsr()
 
 def CG_solve(LHS, RHS):
     """
@@ -201,9 +204,4 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
             ## correct predicted u and w velocity fields
             u = update_u_velocity()
             w = update_w_velocity()
-
-
-
-
-
 

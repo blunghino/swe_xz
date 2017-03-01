@@ -34,5 +34,5 @@ def part3():
 
 if __name__ == '__main__':
     # part3()
-    csr = construct_LHS_pressure(2,2,4,4)
+    csr = construct_LHS_pressure(2,2,3,3)
     print(csr.toarray())
