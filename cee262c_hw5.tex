@@ -290,6 +290,7 @@ At $(0,N_k-1)$:
 + \frac{1}{\Delta z^2} (-3 q_{0,N_k-1}^c + q_{0,N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,N_k-1}^* }{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
 \end{equation*}
 
+Using these boundary conditions and (\ref{eq:discrete_poisson}) a pentadiagonal matrix can be formed and solved with a conjugate gradient solver.
 
 After solving the system of equations for $q^c$ use (\ref{eq:pressure_update}) to calculate $q^{n+1/2}$. Then use (\ref{eq:u-velocity_pressure_correction}) to update the u-velocity field $u^{n+1}$. To update the w-velocity field use the fact that the flow is divergence free:
 

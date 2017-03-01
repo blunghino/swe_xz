@@ -27,12 +27,11 @@ def part3():
         N_k,
         Dt,
         theta,
+        hydrostatic=True,
     )
     prob.set_h_initial(initial_condition(prob.xc, L))
     ## run model
     run_swe_xz_problem(prob)
 
 if __name__ == '__main__':
-    # part3()
-    csr = construct_LHS_pressure(2,2,3,3)
-    print(csr.toarray())
+    part3()
