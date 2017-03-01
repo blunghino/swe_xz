@@ -33,4 +33,6 @@ def part3():
     run_swe_xz_problem(prob)
 
 if __name__ == '__main__':
-    part3()
+    # part3()
+    csr = construct_LHS_pressure(2,2,4,4)
+    print(csr.toarray())

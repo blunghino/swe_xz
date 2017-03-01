@@ -107,7 +107,7 @@ To discretize (\ref{eq:swe_z_momentum}) we use the same pressure update given by
 - \frac{\partial q}{\partial z} = -\frac{q_{i,k}^c - q_{i,k-1}^c}{\Delta z} - \frac{q_{i,k}^{n-1/2} - q_{i,k-1}^{n-1/2}}{\Delta z}
 \end{equation*}
 
-Define
+Define $w^*$ such that:
 
 \begin{equation} \label{eq:w-velocity_pressure_correction}
 \frac{w_{i,k}^{n+1} - w_{i,k}^*}{\Delta t} = -\frac{q_{i,k}^c - q_{i,k-1}^c}{\Delta z} 
@@ -123,7 +123,17 @@ Plugging the above discretizations into (\ref{eq:swe_z_momentum}) and subtractin
 w_{i,k}^* = w_{i,k}^n - \frac{\Delta t}{\Delta z} (q_{i,k}^{n-1/2} - q_{i,k-1}^{n-1/2})
 \end{equation}
 
-To discretize (\ref{eq:swe_continuity}) we discretize each term as follows
+The u-velocity field is bounded by walls on both sides such that at all timesteps $u_{0,k} = u_{N_i,k} = 0$. The w-velocity field is bounded by a wall on the bottom such that for all timesteps $w_{i,0} = 0$. At the free surface we must assume $q^c = 0$ such that $q_{i,N_k} = -q_{i,N_k-1}$. This allows (\ref{eq:w_predictor_velocity}) to be solved at the free surface:
+
+\begin{equation*}
+w_{i,N_k}^* = w_{i,N_k}^n - \frac{\Delta t}{\Delta z} (q_{i,N_k}^{n-1/2} - q_{i,N_k-1}^{n-1/2})
+\end{equation*}
+
+\begin{equation} \label{eq:w_str_free_surface}
+w_{i,N_k}^* = w_{i,N_k}^n + \frac{2\Delta t}{\Delta z} q_{i,N_k-1}^{n-1/2}
+\end{equation}
+
+In equation (\ref{eq:swe_continuity}) we discretize each term as follows:
 
 \begin{equation*}
 \frac{\partial h}{\partial t} = \frac{h_{i}^{n+1} - h_i^n}{\Delta t}
@@ -143,16 +153,16 @@ Equation (\ref{eq:swe_continuity}) becomes:
 \frac{h_{i}^{n+1} - h_i^n}{\Delta t} = - \frac{\theta \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
 \end{equation*}
 
-\begin{equation*}
+\begin{equation} \label{eq:h_update}
 h_{i}^{n+1} = h_i^n - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
-\end{equation*}
+\end{equation}
 
 Substituting in (\ref{eq:u_predictor_velocity}) for $u^*$:
 
 \begin{multline*}
 h_{i}^{n+1} = h_i^n  - \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n) ...
 \\ 
-- \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} \left( S_{i+1,k} - \frac{g \theta \Delta t}{\Delta x} (h_{i+1}^{n+1} - h_{i}^{n+1}) - S_{i,k} - \frac{g \theta \Delta t}{\Delta x} (h_{i}^{n+1} - h_{i-1}^{n+1}) \right)
+- \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} \left( S_{i+1,k} - \frac{g \theta \Delta t}{\Delta x} (h_{i+1}^{n+1} - h_{i}^{n+1}) - S_{i,k} + \frac{g \theta \Delta t}{\Delta x} (h_{i}^{n+1} - h_{i-1}^{n+1}) \right)
 \end{multline*}
 
 \begin{multline*}
@@ -160,9 +170,138 @@ h_{i}^{n+1} - \frac{\theta \Delta t D}{\Delta x} \left(\frac{g \theta \Delta t}{
 \\= h_i^n  - \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} ( S_{i+1,k} - S_{i,k} )
 \end{multline*}
 
+\begin{equation*}
+-a h_{i-1}^{n+1} + (1+2a) h_i^{n+1} -a h_{i+1}^{n+1} = R_i
+\end{equation*}
+
+Where:
+
+\begin{equation*}
+a = \frac{\theta^2 g D \Delta t^2}{\Delta x^2}
+\end{equation*}
+
+\begin{equation*}
+R_i = h_i^n  - \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} ( S_{i+1,k} - S_{i,k} )
+\end{equation*}
+
+At the boundary cells we use the no-flux boundary condition to complete the system of equations. Starting from (\ref{eq:h_update}) we derive the equations for $h_0$ and $h_{N_i-1}$:
+
+\begin{align*}
+h_0^{n+1} &= h_0^n  -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{1,k}^n - u_{0,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{1,k}^* - u_{0,k}^*)
+\\
+h_0^{n+1} &= h_0^n  -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{1,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (S_{1,k} - \frac{g \theta \Delta t}{\Delta x} (h_1^{n+1} - h_0^{n+1}))
+\\
+(1+a)h_0^{n+1} - ah_1^{n+1} &=  h_0^n  -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{1,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (S_{1,k} ) = R_0
+\end{align*}
+\begin{align*}
+h_{N_i-1}^{n+1} &= h_{N_i-1}^n  -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{N_i,k}^n - u_{N_i-1,k}^n) - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{N_i,k}^* - u_{N_i-1,k}^*)
+\\
+h_{N_i-1}^{n+1} &= h_{N_i-1}^n  +  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} ( u_{N_i-1,k}^n) + \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (S_{N_i-1,k} - \frac{g \theta \Delta t}{\Delta x} (h_{N_i-1}^{n+1} - h_{i-2}^{n+1}))
+\\
+(1+a)h_{N_i-1}^{n+1} -ah_{N_i-2}^{n+1} &= h_{N_i-1}^n  +  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} ( u_{N_i-1,k}^n) + \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (S_{N_i-1,k}) = R_{N_i-1}
+\end{align*}
+
+To solve for $h^{n+1}$ solve the following tridiagonal system:
+
+\begin{equation*}
+\begin{pmatrix} 
+(1 + a) & -a 
+\\  & \ddots & \ddots 
+\\ & & -a & (1 + 2a) & -a
+\\ & & & \ddots & \ddots
+\\ & & & & -a & (1 + a)
+\end{pmatrix} \begin{pmatrix} ~\\~ \\ h \\ ~\\~ \end{pmatrix}^{n+1} = \begin{pmatrix} R_0 \\ \vdots \\ R_j \\ \vdots \\ R_{N_i-1} \end{pmatrix}
+\end{equation*}
 
 % q2
 \section{}
+
+In (\ref{eq:u-velocity_pressure_correction}) and (\ref{eq:w-velocity_pressure_correction}) we defined $\vec{u}^{n+1} = \vec{u}^* - \Delta t \vec{\nabla} q^c$. Taking the divergence and using $\vec{\nabla} \cdot \vec{u}^{n+1} = 0$:
+
+\begin{align*}
+\vec{u}^{n+1} &= \vec{u}^* - \Delta t \vec{\nabla} q^c
+\\
+\nabla^2 q^c &= \frac{1}{\Delta t} \vec{\nabla} \cdot \vec{u}^*
+\end{align*}
+
+This can be written discretely as:
+
+\begin{equation*}
+\frac{1}{\Delta x} \left( \frac{\partial q^c}{\partial x} \bigg|_{i+1,k} - \frac{\partial q^c}{\partial x} \bigg|_{i,k} \right) 
++ \frac{1}{\Delta z} \left( \frac{\partial q^c}{\partial z} \bigg|_{i,k+1} - \frac{\partial q^c}{\partial z} \bigg|_{i,k} \right) = b_{i,k}
+\end{equation*}
+
+\begin{equation} \label{eq:discrete_poisson}
+\frac{1}{\Delta x^2} (q_{i+1,k}^c - 2 q_{i,k}^c + q_{i-1,k}^c) 
++ \frac{1}{\Delta z^2} (q_{i,k+1}^c- 2 q_{i,k}^c + q_{i,k-1}^c) = b_{i,k}
+\end{equation}
+
+\begin{equation*}
+b_{i,k} = \frac{1}{\Delta t} \left( \frac{u_{i+1,k}^* - u_{i,k}^*}{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
+\end{equation*}
+
+Using the no-flux condition at the walls ($u_{0,k}=u_{N_i,k}=0$ and $w_{i,0} = 0$), and the free surface condition $q_{i,N_k}=-q_{i,N_k-1}$ as in (\ref{eq:w_str_free_surface}) we can rewrite (\ref{eq:discrete_poisson}) to work at the 8 different types of boundaries:
+
+At $(0,k)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} (q_{1,k}^c - 2 q_{0,k}^c) 
++ \frac{1}{\Delta z^2} (q_{0,k+1}^c- 2 q_{0,k}^c + q_{0,k-1}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,k}^*}{\Delta x}  + \frac{w_{0,k+1}^* - w_{0,k}^*}{\Delta z}\right)
+\end{equation*}
+
+At $(0,0)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} (q_{1,0}^c - 2 q_{0,0}^c) 
++ \frac{1}{\Delta z^2} (q_{0,1}^c- 2 q_{0,0}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,0}^*}{\Delta x}  + \frac{w_{0,1}^*}{\Delta z}\right)
+\end{equation*}
+
+At $(i,0)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} (q_{i+1,0}^c - 2 q_{i,0}^c + q_{i-1,0}^c) 
++ \frac{1}{\Delta z^2} (q_{i,1}^c- 2 q_{i,0}^c) = \frac{1}{\Delta t} \left( \frac{u_{i+1,0}^* - u_{i,0}^*}{\Delta x}  + \frac{w_{i,1}^*}{\Delta z}\right)
+\end{equation*}
+
+At $(N_i-1,0)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} ( - 2 q_{N_i-1,0}^c + q_{N_i-2,0}^c) 
++ \frac{1}{\Delta z^2} (q_{N_i-1,1}^c- 2 q_{N_i-1,0}^c) = \frac{1}{\Delta t} \left( \frac{- u_{N_i-1,0}^*}{\Delta x}  + \frac{w_{N_i-1,1}^* }{\Delta z}\right)
+\end{equation*}
+
+At $(N_i-1,k)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} (- 2 q_{N_i-1,k}^c + q_{N_i-2,k}^c) 
++ \frac{1}{\Delta z^2} (q_{N_i-1,k+1}^c- 2 q_{N_i-1,k}^c + q_{N_i-1,k-1}^c) = \frac{1}{\Delta t} \left( \frac{ - u_{N_i-1,k}^*}{\Delta x}  + \frac{w_{N_i-1,k+1}^* - w_{N_i-1,k}^*}{\Delta z}\right)
+\end{equation*}
+
+At $(N_i-1, N_k-1)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} ( - 2 q_{N_i-1, N_k-1}^c + q_{N_i-2, N_k-1}^c) 
++ \frac{1}{\Delta z^2} (- 3 q_{N_i-1, N_k-1}^c + q_{N_i-1, N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{ - u_{N_i-1, N_k-1}^*}{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
+\end{equation*}
+
+At $(i,N_k-1)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} (q_{i+1,N_k-1}^c - 2 q_{i,N_k-1}^c + q_{i-1,N_k-1}^c) 
++ \frac{1}{\Delta z^2} (- 3 q_{i,N_k-1}^c + q_{i,N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{u_{i+1,N_k-1}^* - u_{i,N_k-1}^*}{\Delta x}  + \frac{w_{i,N_k}^* - w_{i,N_k-1}^*}{\Delta z}\right)
+\end{equation*}
+
+At $(0,N_k-1)$:
+\begin{equation*}
+\frac{1}{\Delta x^2} (q_{1,N_k-1}^c - 2 q_{0,N_k-1}^c ) 
++ \frac{1}{\Delta z^2} (-3 q_{0,N_k-1}^c + q_{0,N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,N_k-1}^* }{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
+\end{equation*}
+
+
+After solving the system of equations for $q^c$ use (\ref{eq:pressure_update}) to calculate $q^{n+1/2}$. Then use (\ref{eq:u-velocity_pressure_correction}) to update the u-velocity field $u^{n+1}$. To update the w-velocity field use the fact that the flow is divergence free:
+
+\begin{equation*}
+\frac{w_{i,k+1}^{n+1} - w_{i,k}^{n+1}}{\Delta z} = - \frac{u_{i+1,k}^{n+1} - u_{i,k}^{n+1}}{\Delta x}
+\end{equation*}
+
+\begin{equation*}
+w_{i,k+1}^{n+1} = w_{i,k}^{n+1} - \frac{\Delta z}{\Delta x} (u_{i+1,k}^{n+1} - u_{i,k}^{n+1})
+\end{equation*}
+
+Starting with the bottom boundary condition $w_{i,0} = 0$ this system of equations can be solved by back substitution.
 
 % q3
 \section{}

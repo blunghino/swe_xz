@@ -2,7 +2,9 @@
 solve the 2D-V shallow water equations
 """
 import numpy as np 
-import scipy.linalg 
+import scipy.linalg
+from scipy.sparse import coo_matrix 
+import scipy.sparse.linalg
 
 
 class SweXZProblem:
@@ -85,10 +87,55 @@ def calc_RHS_pressure():
     """
     pass
 
-def construct_LHS_pressure():
+def construct_LHS_pressure(Dx, Dz, N_i, N_k):
     """
+    construct the Laplacian operator used to solve for the 
+    non-hydrostatic pressure correction 
     """
-    pass
+    ## common values
+    ooDx2 = 1 / Dx**2
+    ooDz2 = 1 / Dz**2
+    diag = -2 * (ooDx2 + ooDz2)
+    ## dimension of a row/col
+    n_q = N_i * N_k
+    ## vectors to fill
+    val = np.zeros(5*n_q, dtype=float)
+    row = np.zeros(5*n_q, dtype=int)
+    col = np.zeros(5*n_q, dtype=int)
+    idx = 0
+    for i in range(N_i):
+        for k in range(N_k):
+            if k == N_k-1:
+                row[idx] = i
+                col[idx] = k
+                val[idx] = - 2 * ooDx2 - 3 * ooDz2
+                idx += 1
+            else:
+                row[idx] = i
+                col[idx] = k
+                val[idx] = diag
+                idx += 1
+            if i != 0:
+                row[idx] = i
+                col[idx] = k - N_k
+                val[idx] = ooDx2
+                idx += 1
+            if i != N_i-1:
+                row[idx] = i
+                col[idx] = k + N_k 
+                val[idx] = ooDx2
+                idx += 1
+            if k != 0
+                row[idx] = i 
+                col[idx] = k - 1
+                val[idx] = ooDz2
+                idx += 1
+            if k != N_k-1:
+                row[idx] = i
+                col[idx] = k + 1
+                val[idx] = ooDz2
+                idx += 1
+    return coo_matrix((val, (row,col)), shape=(N_i,N_k)).tocsr()
 
 def CG_solve(LHS, RHS):
     """
@@ -105,7 +152,7 @@ def update_w_velocity(q):
     """
     pass
 
-def run_swe_xz_problem(p):
+def run_swe_xz_problem(p, cg_tol=1e-10):
     """
     steps to compute solution to `p`, a SweXZProblem
 
@@ -124,8 +171,10 @@ def run_swe_xz_problem(p):
     u_str = np.zeros_like(u)
     w_str = np.zeros_like(w)
     q_c = np.zeros_like(q)
-    A_p = np.zeros_like(u)
     S = np.zeros_like(u) 
+    ## these matrices don't vary in time
+    LHS_h = construct_LHS_freesurface()
+    LHS_q = construct_LHS_pressure(p.Dx, p.Dz, p.N_i, p.N_k)
     ## time loop starting at t_ = p.Dt
     for t_ in p.t[1:]:
         ## cell centered H
@@ -134,13 +183,11 @@ def run_swe_xz_problem(p):
         S = calc_S()
         ## LHS and RHS for free surface system (b)
         RHS_h = calc_RHS_freesurface()
-        LHS_h = construct_LHS_freesurface()
         ## solve for free surface (c)
         h_new = scipy.linalg.solve(LHS_h, RHS_h)
-        ## hydrostatic: q = 0
+        ## hydrostatic: q = 0, w = 0
         if p.hydrostatic:
             u = predict_u_velocity(q)
-            w = predict_w_velocity(q)
         ## non hydrostatic q
         else:
             ## update predictor velocity fields using old q (d)
@@ -148,9 +195,8 @@ def run_swe_xz_problem(p):
             w_str = predict_w_velocity(q)
             ## LHS, RHS for pressure field
             RHS_q = calc_RHS_pressure()
-            LHS_q = construct_LHS_pressure()
             ## use CG to solve for q_c and update nonhydrostatic pressure
-            q_c = CG_solve(LHS_q, RHS_q)
+            q_c = scipy.sparse.linalg.cg(LHS_q, RHS_q, tol=cg_tol)
             q += q_c
             ## correct predicted u and w velocity fields
             u = update_u_velocity()
