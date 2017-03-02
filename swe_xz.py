@@ -313,30 +313,51 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
     p.u_out = u 
     p.w_out = w 
 
-def snapshot_velocity_freesurface(x, z, u, w, h, L, D):
-    fig = plt.figure()
+def snapshot_velocity_freesurface(x, z, u, w, h, L, D, scale_h=10):
     X, Z = np.meshgrid(x/L, z/D)
     uc = (u[1:,:] + u[:-1,:]) / 2
     wc = (w[:,1:] + w[:,:-1]) / 2
-    plt.plot(x, h + D)
+    fig = plt.figure()
+    plt.plot(x/L, scale_h*h + D)
     plt.pcolor(X, Z, uc.T**2 + wc.T**2, cmap='viridis')
     plt.quiver(X, Z, uc.T, wc.T)
     plt.xlabel("x/L")
     plt.ylabel("z/D")
     return fig 
 
-def timeseries_freesurface(t, T0, h_list, a, labels, subplots):
+def timeseries_freesurface(t, T0, h_list, h_analytical_list, a, labels, subplots):
     fig = plt.figure()
     n_sp = max(subplots)
     plt.subplot(n_sp, 1, 1)
     t_ = t / T0
-    for j, h in enumerate(h_list):
+    h_analytical = h_list[0] / a 
+    ## first entry in h_list should be analytical, plotted on every subplot
+    for j, h in enumerate(h_list[1:]):
         plt.subplot(n_sp, 1, subplots[j])
+        if not j % 2:
+            plt.plot(t_, h_analytical_list[j//2], label="Analytical")
         plt.plot(t_, h/a, label=labels[j])
-    plt.xlabel('t/T0')
-    plt.ylabel('h/a')
+        plt.xlabel('t/T0')
+        plt.ylabel('h/a')
     plt.legend(loc="upper left")
     return fig 
 
-def snapshot_velocity_profiles(z, D, u_list, w_list, labels, subplots):
-    pass 
+def snapshot_velocity_profiles(zc, D, Dz, u_list, w_list, labels, subplots):
+    zc_ = zc / D
+    zf_ = np.arange(0, D + Dz, Dz) / D 
+    N_i = w_list[0].shape[0]
+    mid = N_i // 2 
+    n_sp = max(subplots)
+    fig = plt.figure()
+    plt.subplot(1, n_sp, 1)
+    for j, (u, w) in enumerate(zip(u_list, w_list)):
+        u_ck = 0.5 * (u[mid-1,:] + u[mid,:])
+        w_rk = 0.5 * (3 * w[-1,:] - w[-2,:])
+        u_ = np.abs(u_ck) / np.max(np.abs(u_ck))
+        w_ = np.abs(w_rk) / np.max(np.abs(w_rk))
+        plt.subplot(1, n_sp, subplots[j])
+        plt.plot(u_, zc_)
+        plt.plot(w_, zf_) 
+        plt.xlabel('velocity/max(velocity)')
+        plt.ylabel('z/D')
+    return fig 
