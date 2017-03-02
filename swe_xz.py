@@ -69,6 +69,16 @@ class SweXZProblem:
     def set_h_initial(self, h_initial):
         self.h_initial = h_initial
 
+    def calc_timeseries_val(self, h):
+        """
+        method to set value to store
+        """
+        if self.timeseries_loc == 0:
+            return 1.5 * h[0] - 0.5 * h[1]
+        elif self.timeseries_loc == self.L:
+            return 1.5 * h[-1] - 0.5 * h[-2]
+        else:
+            return h[self.timeseries_idx]
 
 def calc_S(u, h, q, Dt, Dx, theta, g):
     """
@@ -265,17 +275,20 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
     ## these sparse matrices don't vary in time
     LHS_h = construct_LHS_freesurface(p.N_i, p.D, p.Dt, p.Dx, p.theta, p.g)
     LHS_q = construct_LHS_pressure(p.Dx, p.Dz, p.N_i, p.N_k)
-    ## time loop starting at t_ = p.Dt
-    for t_ in p.t[1:]:
+    ## record initial condition output value in timeseries
+    p.h_timeseries[0] = p.calc_timeseries_val(p.h_initial)
+    ## time loop starting at t_ = p.Dt and j = 1
+    for j, t_ in enumerate(p.t[1:], start=1):
         ## explicit update data for u (a)
         S = calc_S(u, h, q, p.Dt, p.Dx, p.theta, p.g)
         ## LHS and RHS for free surface system (b)
         RHS_h = calc_RHS_freesurface(u, S, h, p.Dt, p.Dx, p.Dz, p.theta)
         ## solve for free surface (c)
         h = scipy.sparse.linalg.spsolve(LHS_h, RHS_h)
-        ## hydrostatic: q = 0, w = 0
+        ## hydrostatic: q_c = 0
         if p.hydrostatic:
             u = predict_u_velocity(h, S, p.Dt, p.Dx, p.theta, p.g)
+            w = update_w_velocity(u, p.Dx, p.Dz)
         ## non hydrostatic q
         else:
             ## update predictor velocity fields using old q (d)
@@ -293,17 +306,37 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
             ## correct predicted u and w velocity fields
             u = update_u_velocity(u_str, q_c, p.Dt, p.Dx)
             w = update_w_velocity(u, p.Dx, p.Dz)
+        ## store timeseries data
+        p.h_timeseries[j] = p.calc_timeseries_val(h)
     ## output data at final timestep
     p.h_out = h 
     p.u_out = u 
     p.w_out = w 
 
-def snapshot_velocity_freesurface(x, z, u, w, h, D):
+def snapshot_velocity_freesurface(x, z, u, w, h, L, D):
     fig = plt.figure()
-    z = D - z 
-    X, Z = np.meshgrid(x, z)
+    X, Z = np.meshgrid(x/L, z/D)
     uc = (u[1:,:] + u[:-1,:]) / 2
     wc = (w[:,1:] + w[:,:-1]) / 2
     plt.plot(x, h + D)
+    plt.pcolor(X, Z, uc.T**2 + wc.T**2, cmap='viridis')
     plt.quiver(X, Z, uc.T, wc.T)
+    plt.xlabel("x/L")
+    plt.ylabel("z/D")
     return fig 
+
+def timeseries_freesurface(t, T0, h_list, a, labels, subplots):
+    fig = plt.figure()
+    n_sp = max(subplots)
+    plt.subplot(n_sp, 1, 1)
+    t_ = t / T0
+    for j, h in enumerate(h_list):
+        plt.subplot(n_sp, 1, subplots[j])
+        plt.plot(t_, h/a, label=labels[j])
+    plt.xlabel('t/T0')
+    plt.ylabel('h/a')
+    plt.legend(loc="upper left")
+    return fig 
+
+def snapshot_velocity_profiles(z, D, u_list, w_list, labels, subplots):
+    pass 
