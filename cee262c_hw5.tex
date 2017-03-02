@@ -81,6 +81,10 @@ And define $u^*$ such that:
 \frac{u_{i,k}^{n+1} - u_{i,k}^*}{\Delta t} = -\frac{q_{i,k}^c - q_{i-1,k}^c}{\Delta x} 
 \end{equation}
 
+\begin{equation} \label{eq:u-velocity_update}
+u_{i,k}^{n+1} = u_{i,k}^* - \frac{\Delta t}{\Delta x} (q_{i,k}^c - q_{i-1,k}^c)
+\end{equation}
+
 Using the above discretizations in (\ref{eq:swe_x_momentum}) and subtracting (\ref{eq:u-velocity_pressure_correction}):
 
 \begin{equation*}
@@ -216,7 +220,7 @@ To solve for $h^{n+1}$ solve the following tridiagonal system:
 % q2
 \section{}
 
-In (\ref{eq:u-velocity_pressure_correction}) and (\ref{eq:w-velocity_pressure_correction}) we defined $\vec{u}^{n+1} = \vec{u}^* - \Delta t \vec{\nabla} q^c$. Taking the divergence and using $\vec{\nabla} \cdot \vec{u}^{n+1} = 0$:
+In (\ref{eq:u-velocity_update}) and (\ref{eq:w-velocity_pressure_correction}) we dicretely defined $\vec{u}^{n+1} = \vec{u}^* - \Delta t \vec{\nabla} q^c$. Taking the divergence and using $\vec{\nabla} \cdot \vec{u}^{n+1} = 0$:
 
 \begin{align*}
 \vec{u}^{n+1} &= \vec{u}^* - \Delta t \vec{\nabla} q^c
@@ -226,10 +230,10 @@ In (\ref{eq:u-velocity_pressure_correction}) and (\ref{eq:w-velocity_pressure_co
 
 This can be written discretely as:
 
-\begin{equation*}
+\begin{equation} \label{eq:poisson_with_derivatives}
 \frac{1}{\Delta x} \left( \frac{\partial q^c}{\partial x} \bigg|_{i+1,k} - \frac{\partial q^c}{\partial x} \bigg|_{i,k} \right) 
 + \frac{1}{\Delta z} \left( \frac{\partial q^c}{\partial z} \bigg|_{i,k+1} - \frac{\partial q^c}{\partial z} \bigg|_{i,k} \right) = b_{i,k}
-\end{equation*}
+\end{equation}
 
 \begin{equation} \label{eq:discrete_poisson}
 \frac{1}{\Delta x^2} (q_{i+1,k}^c - 2 q_{i,k}^c + q_{i-1,k}^c) 
@@ -240,30 +244,38 @@ This can be written discretely as:
 b_{i,k} = \frac{1}{\Delta t} \left( \frac{u_{i+1,k}^* - u_{i,k}^*}{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
 \end{equation*}
 
-Using the no-flux condition at the walls ($u_{0,k}=u_{N_i,k}=0$ and $w_{i,0} = 0$), and the free surface condition $q_{i,N_k}=-q_{i,N_k-1}$ as in (\ref{eq:w_str_free_surface}) we can rewrite (\ref{eq:discrete_poisson}) to work at the 8 different types of boundaries:
+Using the no-flux condition at the walls ($u_{0,k}=u_{N_i,k}=0$ and $w_{i,0} = 0$) in (\ref{eq:u-velocity_pressure_correction}):
+
+\begin{align*}
+\frac{u_{i=\text{wall},k}^{n+1} - u_{i=\text{wall},k}^*}{\Delta t} &= -\frac{q_{i,k}^c - q_{i-1,k}^c}{\Delta x}
+\\
+0 &= \frac{\partial q^c}{\partial x} \bigg|_{\text{wall},k}
+\end{align*}
+
+The result is analagous in (\ref{eq:w-velocity_pressure_correction}). With this information and with the free surface condition $q_{i,N_k}=-q_{i,N_k-1}$ as in (\ref{eq:w_str_free_surface}) we can rewrite (\ref{eq:discrete_poisson}) to work at the 8 different types of boundaries:
 
 At $(0,k)$:
 \begin{equation*}
-\frac{1}{\Delta x^2} (q_{1,k}^c - 2 q_{0,k}^c) 
+\frac{1}{\Delta x^2} (q_{1,k}^c - q_{0,k}^c) 
 + \frac{1}{\Delta z^2} (q_{0,k+1}^c- 2 q_{0,k}^c + q_{0,k-1}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,k}^*}{\Delta x}  + \frac{w_{0,k+1}^* - w_{0,k}^*}{\Delta z}\right)
 \end{equation*}
 
 At $(0,0)$:
 \begin{equation*}
-\frac{1}{\Delta x^2} (q_{1,0}^c - 2 q_{0,0}^c) 
-+ \frac{1}{\Delta z^2} (q_{0,1}^c- 2 q_{0,0}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,0}^*}{\Delta x}  + \frac{w_{0,1}^*}{\Delta z}\right)
+\frac{1}{\Delta x^2} (q_{1,0}^c -  q_{0,0}^c) 
++ \frac{1}{\Delta z^2} (q_{0,1}^c-  q_{0,0}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,0}^*}{\Delta x}  + \frac{w_{0,1}^*}{\Delta z}\right)
 \end{equation*}
 
 At $(i,0)$:
 \begin{equation*}
 \frac{1}{\Delta x^2} (q_{i+1,0}^c - 2 q_{i,0}^c + q_{i-1,0}^c) 
-+ \frac{1}{\Delta z^2} (q_{i,1}^c- 2 q_{i,0}^c) = \frac{1}{\Delta t} \left( \frac{u_{i+1,0}^* - u_{i,0}^*}{\Delta x}  + \frac{w_{i,1}^*}{\Delta z}\right)
++ \frac{1}{\Delta z^2} (q_{i,1}^c- q_{i,0}^c) = \frac{1}{\Delta t} \left( \frac{u_{i+1,0}^* - u_{i,0}^*}{\Delta x}  + \frac{w_{i,1}^*}{\Delta z}\right)
 \end{equation*}
 
 At $(N_i-1,0)$:
 \begin{equation*}
-\frac{1}{\Delta x^2} ( - 2 q_{N_i-1,0}^c + q_{N_i-2,0}^c) 
-+ \frac{1}{\Delta z^2} (q_{N_i-1,1}^c- 2 q_{N_i-1,0}^c) = \frac{1}{\Delta t} \left( \frac{- u_{N_i-1,0}^*}{\Delta x}  + \frac{w_{N_i-1,1}^* }{\Delta z}\right)
+\frac{1}{\Delta x^2} ( -  q_{N_i-1,0}^c + q_{N_i-2,0}^c) 
++ \frac{1}{\Delta z^2} (q_{N_i-1,1}^c-  q_{N_i-1,0}^c) = \frac{1}{\Delta t} \left( \frac{- u_{N_i-1,0}^*}{\Delta x}  + \frac{w_{N_i-1,1}^* }{\Delta z}\right)
 \end{equation*}
 
 At $(N_i-1,k)$:
@@ -274,25 +286,25 @@ At $(N_i-1,k)$:
 
 At $(N_i-1, N_k-1)$:
 \begin{equation*}
-\frac{1}{\Delta x^2} ( - 2 q_{N_i-1, N_k-1}^c + q_{N_i-2, N_k-1}^c) 
+\frac{1}{\Delta x^2} ( -  q_{N_i-1, N_k-1}^c + q_{N_i-2, N_k-1}^c) 
 + \frac{1}{\Delta z^2} (- 3 q_{N_i-1, N_k-1}^c + q_{N_i-1, N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{ - u_{N_i-1, N_k-1}^*}{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
 \end{equation*}
 
 At $(i,N_k-1)$:
 \begin{equation*}
-\frac{1}{\Delta x^2} (q_{i+1,N_k-1}^c - 2 q_{i,N_k-1}^c + q_{i-1,N_k-1}^c) 
+\frac{1}{\Delta x^2} (q_{i+1,N_k-1}^c -  2q_{i,N_k-1}^c + q_{i-1,N_k-1}^c) 
 + \frac{1}{\Delta z^2} (- 3 q_{i,N_k-1}^c + q_{i,N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{u_{i+1,N_k-1}^* - u_{i,N_k-1}^*}{\Delta x}  + \frac{w_{i,N_k}^* - w_{i,N_k-1}^*}{\Delta z}\right)
 \end{equation*}
 
 At $(0,N_k-1)$:
 \begin{equation*}
-\frac{1}{\Delta x^2} (q_{1,N_k-1}^c - 2 q_{0,N_k-1}^c ) 
+\frac{1}{\Delta x^2} (q_{1,N_k-1}^c -  q_{0,N_k-1}^c ) 
 + \frac{1}{\Delta z^2} (-3 q_{0,N_k-1}^c + q_{0,N_k-2}^c) = \frac{1}{\Delta t} \left( \frac{u_{1,N_k-1}^* }{\Delta x}  + \frac{w_{i,k+1}^* - w_{i,k}^*}{\Delta z}\right)
 \end{equation*}
 
-Using these boundary conditions and (\ref{eq:discrete_poisson}) a pentadiagonal matrix can be formed and solved with a conjugate gradient solver.
+Using these boundary conditions and (\ref{eq:discrete_poisson}) a pentadiagonal matrix can be constructed and $q^c$ can be computed using a conjugate gradient solver.
 
-After solving the system of equations for $q^c$ use (\ref{eq:pressure_update}) to calculate $q^{n+1/2}$. Then use (\ref{eq:u-velocity_pressure_correction}) to update the u-velocity field $u^{n+1}$. To update the w-velocity field use the fact that the flow is divergence free:
+After solving the system of equations for $q^c$ use (\ref{eq:pressure_update}) to calculate $q^{n+1/2}$. Then use (\ref{eq:u-velocity_update}) to update the u-velocity field $u^{n+1}$. To update the w-velocity field use the fact that the flow is divergence free:
 
 \begin{equation*}
 \frac{w_{i,k+1}^{n+1} - w_{i,k}^{n+1}}{\Delta z} = - \frac{u_{i+1,k}^{n+1} - u_{i,k}^{n+1}}{\Delta x}

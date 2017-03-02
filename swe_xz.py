@@ -105,10 +105,15 @@ def predict_u_velocity(h_new, S, Dt, Dx, theta, g):
     h_mat = repmat(h_new.reshape(N_i,1), 1, N_k)
     return S - (g*theta*Dt/Dx) * (h_mat[1:,:]-h_mat[:-1,:])
 
-def predict_w_velocity(q):
+def predict_w_velocity(w, q, Dt, Dz):
     """
+    calculate the predicted w velocity using the n-1/2 pressure field 
     """
-    pass
+    w_str = np.zeros_like(w)
+    w_str[:,1:-1] = w[:,1:-1] - (Dt/Dz) * (q[:,1:] - q[:,:-1])
+    ## free surface boundary condition
+    w_str[:,-1] = w[:,-1] + (2*Dt/Dz)*q[:,-1]
+    return w_str
 
 def calc_RHS_pressure(u_str, w_str, Dt, Dx, Dz):
     """
@@ -140,10 +145,39 @@ def construct_LHS_pressure(Dx, Dz, N_i, N_k):
         for k in range(N_k):
             idx = i * N_k + k 
             if k == N_k-1:
+                ## free surface corners
+                if i == 0 or i == N_i-1:
+                    row[ctr] = idx
+                    col[ctr] = idx
+                    val[ctr] = -ooDx2 - 3 * ooDz2
+                    ctr += 1
+                ## free surface no corner
+                else:
+                    row[ctr] = idx
+                    col[ctr] = idx
+                    val[ctr] = -2 * ooDx2 - 3 * ooDz2
+                    ctr += 1 
+            ## side walls
+            elif i == 0 or i == N_i-1:
+                ## corners with bottom
+                if k == 0:
+                    row[ctr] = idx
+                    col[ctr] = idx
+                    val[ctr] = - ooDx2 - ooDz2
+                    ctr += 1
+                ## side wall no corner
+                else:
+                    row[ctr] = idx
+                    col[ctr] = idx
+                    val[ctr] = -ooDx2 - 2 * ooDz2
+                    ctr += 1
+            ## bottom no corner
+            elif k == 0:
                 row[ctr] = idx
                 col[ctr] = idx
-                val[ctr] = - 2 * ooDx2 - 3 * ooDz2
-                ctr += 1
+                val[ctr] = -2 * ooDx2 - ooDz2
+                ctr += 1                
+            ## no boundary
             else:
                 row[ctr] = idx
                 col[ctr] = idx
@@ -171,10 +205,14 @@ def construct_LHS_pressure(Dx, Dz, N_i, N_k):
                 ctr += 1
     return coo_matrix((val, (row,col)), shape=(n_q,n_q)).tocsr()
 
-def update_u_velocity():
+def update_u_velocity(u_str, q_c, Dt, Dx):
     """
+    use the predicted u-velocity field and non-hydrostatic pressure 
+    correction to update the u-velocity at time n+1
     """
-    pass
+    u = np.zeros_like(u_str)
+    u[1:-1,:] = u_str[1:-1,:] - (Dt/Dx) * (q_c[1:,:]-q_c[:-1,:])
+    return u 
 
 def update_w_velocity():
     """

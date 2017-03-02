@@ -6,7 +6,8 @@ from swe_xz import *
 
 def test_construct_LHS_pressure():
     csr = construct_LHS_pressure(2,2,3,3)
-    print(csr.toarray())
+    A = csr.toarray()
+    print(np.diag(A))
 
 def test_calc_S():
     N_i = 3
@@ -25,4 +26,5 @@ def test_calc_RHS_freesurface():
     R = calc_RHS_freesurface(u, S, h, 1, 1, 1, 0.5)
 
 if __name__ == '__main__':
-    test_calc_RHS_freesurface()
+    # test_calc_RHS_freesurface()
+    test_construct_LHS_pressure()
