@@ -1,10 +1,13 @@
 """
 solve the 2D-V shallow water equations
 """
+import warnings
+
 import numpy as np 
 from numpy.matlib import repmat 
 from scipy.sparse import coo_matrix, csr_matrix
 import scipy.sparse.linalg
+from matplotlib import pyplot as plt 
 
 
 class SweXZProblem:
@@ -12,7 +15,8 @@ class SweXZProblem:
     class to store parameters for swe_xz model run
     """
     def __init__(self, L, D, t_max, N_i, N_k, Dt, theta=0.5,
-                 hydrostatic=True, h_initial=None, g=9.81):
+                 hydrostatic=True, h_initial=None, g=9.81,
+                 timeseries_loc=0):
         """
         set parameter values
         """
@@ -53,9 +57,18 @@ class SweXZProblem:
             self.h_initial = np.zeros_like(self.xc)
         else:
             self.h_initial = h_initial
+        ## data output
+        self.h_timeseries = np.zeros_like(self.t)
+        self.timeseries_loc = timeseries_loc
+        self.timeseries_idx = self.xc.searchsorted(timeseries_loc)
+        ## initialize vectors to store results
+        self.h_out = np.zeros_like(self.h_initial)
+        self.u_out = np.zeros((self.N_i+1, self.N_k))
+        self.w_out = np.zeros((self.N_i, self.N_k+1))
 
     def set_h_initial(self, h_initial):
         self.h_initial = h_initial
+
 
 def calc_S(u, h, q, Dt, Dx, theta, g):
     """
@@ -102,8 +115,10 @@ def predict_u_velocity(h_new, S, Dt, Dx, theta, g):
     """
     N_i = h_new.shape[0]
     N_k = S.shape[1]
+    u = np.zeros((N_i+1,N_k))
     h_mat = repmat(h_new.reshape(N_i,1), 1, N_k)
-    return S - (g*theta*Dt/Dx) * (h_mat[1:,:]-h_mat[:-1,:])
+    u[1:-1,:] = S[1:-1,:] - (g*theta*Dt/Dx) * (h_mat[1:,:]-h_mat[:-1,:])
+    return u 
 
 def predict_w_velocity(w, q, Dt, Dz):
     """
@@ -214,10 +229,18 @@ def update_u_velocity(u_str, q_c, Dt, Dx):
     u[1:-1,:] = u_str[1:-1,:] - (Dt/Dx) * (q_c[1:,:]-q_c[:-1,:])
     return u 
 
-def update_w_velocity():
+def update_w_velocity(u, Dx, Dz):
     """
+    update the w velocity field using the divergence 
+    free property of the flow
+    update by back substitution
+    w[:,0] = 0
     """
-    pass
+    m, n = u.shape
+    w = np.zeros((m-1, n+1))
+    for k in range(0, n):
+        w[:,k+1] = w[:,k] - (Dz/Dx) * (u[1:,k]-u[:-1,k])
+    return w
 
 def run_swe_xz_problem(p, cg_tol=1e-10):
     """
@@ -257,14 +280,29 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
         else:
             ## update predictor velocity fields using old q (d)
             u_str = predict_u_velocity(h, S, p.Dt, p.Dx, p.theta, p.g)
-            w_str = predict_w_velocity()
+            w_str = predict_w_velocity(w, q, p.Dt, p.Dz)
             ## LHS, RHS for pressure field
             RHS_q = calc_RHS_pressure(u_str, w_str, p.Dt, p.Dx, p.Dz)
             ## use CG to solve for q_c and update nonhydrostatic pressure
-            q_c = scipy.sparse.linalg.cg(LHS_q, RHS_q, tol=cg_tol)
-            q_c.reshape((N_i, N_k))
+            q_c, info = scipy.sparse.linalg.cg(LHS_q, RHS_q, tol=cg_tol)
+            if info != 0:
+                warnings.warn("CG solver: info = {}".format(info))
+            q_c = q_c.reshape((p.N_i, p.N_k))
+            ## add the non-hydrostatic pressure correction
             q += q_c
             ## correct predicted u and w velocity fields
-            u = update_u_velocity()
-            w = update_w_velocity()
+            u = update_u_velocity(u_str, q_c, p.Dt, p.Dx)
+            w = update_w_velocity(u, p.Dx, p.Dz)
+    ## output data at final timestep
+    p.h_out = h 
+    p.u_out = u 
+    p.w_out = w 
 
+def snapshot_velocity_freesurface(x, z, u, w, h, D):
+    fig = plt.figure()
+    X, Z = np.meshgrid(x, z)
+    uc = (u[1:,:] + u[:-1,:]) / 2
+    wc = (w[:,1:] + w[:,:-1]) / 2
+    plt.plot(x, h + D)
+    plt.quiver(X, Z, uc.T, wc.T)
+    return fig 

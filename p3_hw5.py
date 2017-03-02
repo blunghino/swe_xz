@@ -27,11 +27,14 @@ def part3():
         N_k,
         Dt,
         theta,
-        hydrostatic=True,
+        hydrostatic=False,
     )
     prob.set_h_initial(initial_condition(prob.xc, L))
     ## run model
     run_swe_xz_problem(prob)
+    fig = snapshot_velocity_freesurface(prob.xc, prob.zc, prob.u_out, 
+                                        prob.w_out, prob.h_out, prob.D)
+    plt.show()
 
 if __name__ == '__main__':
     part3()
