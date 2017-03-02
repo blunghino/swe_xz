@@ -300,6 +300,7 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
 
 def snapshot_velocity_freesurface(x, z, u, w, h, D):
     fig = plt.figure()
+    z = D - z 
     X, Z = np.meshgrid(x, z)
     uc = (u[1:,:] + u[:-1,:]) / 2
     wc = (w[:,1:] + w[:,:-1]) / 2
