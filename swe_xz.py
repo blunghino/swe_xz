@@ -58,13 +58,17 @@ class SweXZProblem:
         else:
             self.h_initial = h_initial
         ## data output
+        ## free surface timeseries
         self.h_timeseries = np.zeros_like(self.t)
         self.timeseries_loc = timeseries_loc
         self.timeseries_idx = self.xc.searchsorted(timeseries_loc)
-        ## initialize vectors to store results
+        ## time that free surface at timeseries_loc first changes sign
+        self.t_change = None
+        ## initialize arrays to store results
         self.h_out = np.zeros_like(self.h_initial)
         self.u_out = np.zeros((self.N_i+1, self.N_k))
         self.w_out = np.zeros((self.N_i, self.N_k+1))
+        self.q_out = np.zeros((self.N_i, self.N_k))
 
     def set_h_initial(self, h_initial):
         self.h_initial = h_initial
@@ -74,11 +78,19 @@ class SweXZProblem:
         method to set value to store
         """
         if self.timeseries_loc == 0:
-            return 1.5 * h[0] - 0.5 * h[1]
+            h_val = 1.5 * h[0] - 0.5 * h[1]
         elif self.timeseries_loc == self.L:
-            return 1.5 * h[-1] - 0.5 * h[-2]
+            h_val = 1.5 * h[-1] - 0.5 * h[-2]
         else:
-            return h[self.timeseries_idx]
+            h_val = h[self.timeseries_idx]
+        return h_val
+
+def interp_t_change(t_n, h_n, h_np1, Dt):
+    """
+    interpolation to calculate the time at which the free
+    surface changes sign
+    """
+    return t_n - Dt * h_n / (h_np1 - h_n)
 
 def calc_S(u, h, q, Dt, Dx, theta, g):
     """
@@ -308,10 +320,13 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
             w = update_w_velocity(u, p.Dx, p.Dz)
         ## store timeseries data
         p.h_timeseries[j] = p.calc_timeseries_val(h)
+        if p.t_change is None and p.h_timeseries[j] * p.h_timeseries[j-1] <= 0:
+            p.t_change = interp_t_change(p.t[j-1], p.h_timeseries[j-1], p.h_timeseries[j], p.Dt)
     ## output data at final timestep
     p.h_out = h 
     p.u_out = u 
     p.w_out = w 
+    p.q_out = q 
 
 def snapshot_velocity_freesurface(x, z, u, w, h, L, D, scale_h=10):
     X, Z = np.meshgrid(x/L, z/D)
@@ -326,18 +341,22 @@ def snapshot_velocity_freesurface(x, z, u, w, h, L, D, scale_h=10):
     return fig 
 
 def timeseries_freesurface(t, T0, h_list, h_analytical_list, a, labels, subplots):
-    fig = plt.figure(figsize=(12,6))
+    fig = plt.figure(figsize=(13,9))
     n_sp = max(subplots)
     plt.subplot(n_sp, 1, 1)
+    plt.title("D/L = 1")
+    plt.subplot(n_sp, 1, 2)
+    plt.title("D/L = 1/4")
+    plt.subplot(n_sp, 1, 3)
+    plt.title("D/L = 1/8")
+    plt.xlabel('t/T0')
     t_ = t / T0
-    h_analytical = h_list[0] / a 
     ## first entry in h_list should be analytical, plotted on every subplot
-    for j, h in enumerate(h_list[1:]):
+    for j, h in enumerate(h_list):
         plt.subplot(n_sp, 1, subplots[j])
         if not j % 2:
-            plt.plot(t_, h_analytical_list[j//2]/a, label="Analytical")
+            plt.plot(t_, h_analytical_list[j//2]/a, ls='--', c='k', label="Analytical")
         plt.plot(t_, h/a, label=labels[j])
-        plt.xlabel('t/T0')
         plt.ylabel('h/a')
     plt.legend(loc="upper left")
     return fig 

@@ -319,8 +319,50 @@ Starting with the bottom boundary condition $w_{i,0} = 0$ this system of equatio
 % q3
 \section{}
 
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=\linewidth]{fig/timeseries_freesurface.png}
+			\caption{Timeseries of free surface height normalized by initial condition amplitude at $x/L=0$. Comparison of theoretical, non-hydrostatic and hydrostatic results for $D/L \in \{1, 1/4, 1/8\}$.}
+			\label{fig:timeseries_freesurface}
+		\end{center}
+	\end{figure}
+
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=\linewidth]{fig/snapshot_velocity_profiles.png}
+			\caption{Vertical profiles of velocity for $u$ and $w$ normalized by their maximum value along the profile. Comparison of non-hydrostatic and hydrostatic velocity profiles for $D/L \in \{1, 1/4, 1/8\}$.}
+			\label{fig:snapshot_velocity_profiles}
+		\end{center}
+	\end{figure}
+
 % q4
 \section{}
+
+With $k = 2\pi/\lambda$ and $\lambda = 2L$, the theoretical wave phase speed is:
+
+\begin{equation} \label{eq:dispersion_relation}
+c = \sqrt{\frac{g}{k} \tanh(kD)}
+\end{equation}
+
+The deep-water limit of the dispersion relation is:
+
+\begin{equation} \label{eq:deep-water_limit}
+c_0 = \sqrt{\frac{g}{k}}
+\end{equation}
+
+The shallow-water limit is:
+
+\begin{equation} \label{eq:shallow-water_limit}
+c_s = \sqrt{gD}
+\end{equation}
+
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=0.8\linewidth]{fig/plot_dispersion_relations.png}
+			\caption{Theoretical and numerical dispersion relations for wave phase speed normalized by the deep-water limit. The theoretical intermediate value is given by (\ref{eq:dispersion_relation}). The theoretical deep-water limit is given by (\ref{eq:deep-water_limit}) and the theoretical shallow-water limit is given by (\ref{eq:shallow-water_limit}).}
+			\label{fig:plot_dispersion_relations}
+		\end{center}
+	\end{figure}
 
 % q5
 \section{}

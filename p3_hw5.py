@@ -22,7 +22,7 @@ def part3():
     u_list = []
     w_list = []
     ## labels for plots
-    labels = 3 * ["Non-hydrostatic", "Hydostatic"]
+    labels = 3 * ["Non-hydrostatic", "Hydrostatic"]
     subplots = [1,1,2,2,3,3]
     ## vary domain length
     for j, Lj in enumerate([1, 1, 4, 4, 8, 8]):
@@ -57,13 +57,13 @@ def part3():
         w_list.append(prob.w_out)
         # fig = snapshot_velocity_freesurface(prob.xc, prob.zc, prob.u_out, 
         #                                     prob.w_out, prob.h_out, prob.L, prob.D)
-        # fig.savefig("snapshot_velocity_freesurface_{}_L-{}.png".format(labels[j], Lj))
+        # fig.savefig("fig/snapshot_velocity_freesurface_{}_L-{}.png".format(labels[j], Lj))
     ## free surface timeseries plot
     fig2 = timeseries_freesurface(prob.t, T, h_list, h_analytical_list, a, labels, subplots)
+    fig2.savefig("fig/timeseries_freesurface.png", dpi=300)
     ## vertical velocity profiles plot
     fig3 = snapshot_velocity_profiles(prob.zc, D, prob.Dz, u_list, w_list, labels, subplots)
     plt.savefig("fig/snapshot_velocity_profiles.png", dpi=300)
-    plt.show()
 
 if __name__ == '__main__':
     part3()
