@@ -326,7 +326,7 @@ def snapshot_velocity_freesurface(x, z, u, w, h, L, D, scale_h=10):
     return fig 
 
 def timeseries_freesurface(t, T0, h_list, h_analytical_list, a, labels, subplots):
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12,6))
     n_sp = max(subplots)
     plt.subplot(n_sp, 1, 1)
     t_ = t / T0
@@ -335,7 +335,7 @@ def timeseries_freesurface(t, T0, h_list, h_analytical_list, a, labels, subplots
     for j, h in enumerate(h_list[1:]):
         plt.subplot(n_sp, 1, subplots[j])
         if not j % 2:
-            plt.plot(t_, h_analytical_list[j//2], label="Analytical")
+            plt.plot(t_, h_analytical_list[j//2]/a, label="Analytical")
         plt.plot(t_, h/a, label=labels[j])
         plt.xlabel('t/T0')
         plt.ylabel('h/a')
@@ -347,17 +347,29 @@ def snapshot_velocity_profiles(zc, D, Dz, u_list, w_list, labels, subplots):
     zf_ = np.arange(0, D + Dz, Dz) / D 
     N_i = w_list[0].shape[0]
     mid = N_i // 2 
-    n_sp = max(subplots)
-    fig = plt.figure()
+    n_sp = 3
+    fig = plt.figure(figsize=(13,9))
     plt.subplot(1, n_sp, 1)
+    plt.title("D/L = 1")
+    plt.subplot(1, n_sp, 2)
+    plt.title("D/L = 1/4")
+    plt.subplot(1, n_sp, 3)
+    plt.title("D/L = 1/8")
     for j, (u, w) in enumerate(zip(u_list, w_list)):
         u_ck = 0.5 * (u[mid-1,:] + u[mid,:])
         w_rk = 0.5 * (3 * w[-1,:] - w[-2,:])
         u_ = np.abs(u_ck) / np.max(np.abs(u_ck))
         w_ = np.abs(w_rk) / np.max(np.abs(w_rk))
         plt.subplot(1, n_sp, subplots[j])
-        plt.plot(u_, zc_)
-        plt.plot(w_, zf_) 
-        plt.xlabel('velocity/max(velocity)')
+        ## different symbol between hydrostatic/non-hydrostatic
+        if labels[j][:3] == 'Non':
+            ls = '--'
+        else:
+            ls = '-'
+        plt.plot(u_, zc_, 'r', ls=ls, lw=1.5, label="u, {}".format(labels[j]))
+        plt.plot(w_, zf_, 'k', ls=ls, lw=1.5, label="w, {}".format(labels[j]))
+        plt.xlabel('Normalized Velocity')
         plt.ylabel('z/D')
+        plt.xlim(right=1.1)
+    plt.legend(loc='upper left')
     return fig 
