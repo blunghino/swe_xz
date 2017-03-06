@@ -16,7 +16,7 @@ class SweXZProblem:
     """
     def __init__(self, L, D, t_max, N_i, N_k, Dt, theta=0.5,
                  hydrostatic=True, h_initial=None, g=9.81,
-                 timeseries_loc=0):
+                 timeseries_loc=0, pressure_method='projection'):
         """
         set parameter values
         """
@@ -51,6 +51,12 @@ class SweXZProblem:
         self.g = g 
         ## constant for theta method dicretization
         self.theta = theta 
+        ## how to calculate the non-hydrostatic pressure
+        if pressure_method == 'projection':
+            self.alpha_q = 0
+        ## correction method
+        else:
+            self.alpha_q = 1
         ## free surface initial condition
         if h_initial is None:
             ## vector of same length as cell centered x grid
@@ -92,7 +98,7 @@ def interp_t_change(t_n, h_n, h_np1, Dt):
     """
     return t_n - Dt * h_n / (h_np1 - h_n)
 
-def calc_S(u, h, q, Dt, Dx, theta, g):
+def calc_S(u, h, q, Dt, Dx, theta, g, alpha_q):
     """
     S is an N_i+1 by N_k matrix containing explicit data
     for the u velocity field update 
@@ -103,7 +109,7 @@ def calc_S(u, h, q, Dt, Dx, theta, g):
     h_mat = repmat(h.reshape(N_i,1), 1, N_k)
     S[1:-1,:] = u[1:-1,:] \
                 - (g * Dt * (1-theta) / Dx) * (h_mat[1:,:] - h_mat[:-1,:]) \
-                - (Dt / Dx) * (q[1:,:] - q[:-1,:])
+                - alpha_q * (Dt / Dx) * (q[1:,:] - q[:-1,:])
     return S
 
 def calc_RHS_freesurface(u, S, h, Dt, Dx, Dz, theta):
@@ -292,7 +298,7 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
     ## time loop starting at t_ = p.Dt and j = 1
     for j, t_ in enumerate(p.t[1:], start=1):
         ## explicit update data for u (a)
-        S = calc_S(u, h, q, p.Dt, p.Dx, p.theta, p.g)
+        S = calc_S(u, h, q, p.Dt, p.Dx, p.theta, p.g, p.alpha_q)
         ## LHS and RHS for free surface system (b)
         RHS_h = calc_RHS_freesurface(u, S, h, p.Dt, p.Dx, p.Dz, p.theta)
         ## solve for free surface (c)
@@ -305,7 +311,11 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
         else:
             ## update predictor velocity fields using old q (d)
             u_str = predict_u_velocity(h, S, p.Dt, p.Dx, p.theta, p.g)
-            w_str = predict_w_velocity(w, q, p.Dt, p.Dz)
+            ## in prediction mode, w^* = w^n 
+            if p.alpha_q == 0:
+                w_str = w.copy()
+            else:
+                w_str = predict_w_velocity(w, q, p.Dt, p.Dz)
             ## LHS, RHS for pressure field
             RHS_q = calc_RHS_pressure(u_str, w_str, p.Dt, p.Dx, p.Dz)
             ## use CG to solve for q_c and update nonhydrostatic pressure
@@ -313,10 +323,11 @@ def run_swe_xz_problem(p, cg_tol=1e-10):
             if info != 0:
                 warnings.warn("CG solver: info = {}".format(info))
             q_c = q_c.reshape((p.N_i, p.N_k))
-            ## add the non-hydrostatic pressure correction
-            q += q_c
-            ## correct predicted u and w velocity fields
+            ## add the non-hydrostatic pressure correction or assign q = q_c in predictor mode
+            q = q_c + p.alpha_q * q
+            ## correct predicted u velocity field
             u = update_u_velocity(u_str, q_c, p.Dt, p.Dx)
+            ## update w velocity field
             w = update_w_velocity(u, p.Dx, p.Dz)
         ## store timeseries data
         p.h_timeseries[j] = p.calc_timeseries_val(h)
@@ -338,57 +349,4 @@ def snapshot_velocity_freesurface(x, z, u, w, h, L, D, scale_h=10):
     plt.quiver(X, Z, uc.T, wc.T)
     plt.xlabel("x/L")
     plt.ylabel("z/D")
-    return fig 
-
-def timeseries_freesurface(t, T0, h_list, h_analytical_list, a, labels, subplots):
-    fig = plt.figure(figsize=(13,9))
-    n_sp = max(subplots)
-    plt.subplot(n_sp, 1, 1)
-    plt.title("D/L = 1")
-    plt.subplot(n_sp, 1, 2)
-    plt.title("D/L = 1/4")
-    plt.subplot(n_sp, 1, 3)
-    plt.title("D/L = 1/8")
-    plt.xlabel('t/T0')
-    t_ = t / T0
-    ## first entry in h_list should be analytical, plotted on every subplot
-    for j, h in enumerate(h_list):
-        plt.subplot(n_sp, 1, subplots[j])
-        if not j % 2:
-            plt.plot(t_, h_analytical_list[j//2]/a, ls='--', c='k', label="Analytical")
-        plt.plot(t_, h/a, label=labels[j])
-        plt.ylabel('h/a')
-    plt.legend(loc="upper left")
-    return fig 
-
-def snapshot_velocity_profiles(zc, D, Dz, u_list, w_list, labels, subplots):
-    zc_ = zc / D
-    zf_ = np.arange(0, D + Dz, Dz) / D 
-    N_i = w_list[0].shape[0]
-    mid = N_i // 2 
-    n_sp = 3
-    fig = plt.figure(figsize=(13,9))
-    plt.subplot(1, n_sp, 1)
-    plt.title("D/L = 1")
-    plt.subplot(1, n_sp, 2)
-    plt.title("D/L = 1/4")
-    plt.subplot(1, n_sp, 3)
-    plt.title("D/L = 1/8")
-    for j, (u, w) in enumerate(zip(u_list, w_list)):
-        u_ck = 0.5 * (u[mid-1,:] + u[mid,:])
-        w_rk = 0.5 * (3 * w[-1,:] - w[-2,:])
-        u_ = np.abs(u_ck) / np.max(np.abs(u_ck))
-        w_ = np.abs(w_rk) / np.max(np.abs(w_rk))
-        plt.subplot(1, n_sp, subplots[j])
-        ## different symbol between hydrostatic/non-hydrostatic
-        if labels[j][:3] == 'Non':
-            ls = '--'
-        else:
-            ls = '-'
-        plt.plot(u_, zc_, 'r', ls=ls, lw=1.5, label="u, {}".format(labels[j]))
-        plt.plot(w_, zf_, 'k', ls=ls, lw=1.5, label="w, {}".format(labels[j]))
-        plt.xlabel('Normalized Velocity')
-        plt.ylabel('z/D')
-        plt.xlim(right=1.1)
-    plt.legend(loc='upper left')
     return fig 

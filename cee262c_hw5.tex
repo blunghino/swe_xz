@@ -151,11 +151,11 @@ In equation (\ref{eq:swe_continuity}) we discretize each term as follows:
  &= - \frac{\theta \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
 \end{align*}
 
-Equation (\ref{eq:swe_continuity}) becomes:
+Note in the above expression we have assumed that $u^{n+1} - u^*$ is small and replaced $u^{n+1}$ by $u^*$ in the theta method. Equation (\ref{eq:swe_continuity}) becomes:
 
-\begin{equation*}
+\begin{equation} \label{eq:free_surface_theta}
 \frac{h_{i}^{n+1} - h_i^n}{\Delta t} = - \frac{\theta \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
-\end{equation*}
+\end{equation}
 
 \begin{equation} \label{eq:h_update}
 h_{i}^{n+1} = h_i^n - \frac{\theta \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^* - u_{i,k}^*) -  \frac{(1-\theta) \Delta t \Delta z}{\Delta x} \sum_{k=1}^{N_k} (u_{i+1,k}^n - u_{i,k}^n)
@@ -319,6 +319,8 @@ Starting with the bottom boundary condition $w_{i,0} = 0$ this system of equatio
 % q3
 \section{}
 
+Figure \ref{fig:timeseries_freesurface} shows the time evolution of the free surface comparing the theoretical 
+
 	\begin{figure}[htb]
 		\begin{center}
 			\includegraphics[width=\linewidth]{fig/timeseries_freesurface.png}
@@ -366,5 +368,41 @@ c_s = \sqrt{gD}
 
 % q5
 \section{}
+
+Figure \ref{fig:timeseries_freesurface_projection_correction_20} ($\Delta t = T/20$) and Figure \ref{fig:timeseries_freesurface_projection_correction_80} ($\Delta t = T/80$) compare the freesurface evolution of the projection and correction methods for the non-hydrostatic pressure field. The projection method has a lot of diffusion, for $\Delta t = T/20$ the diffusion takes the free surface fluctuations to essentially zero by about 5 wave periods. For $\Delta t = T/20$ the correction method also shows significant diffusion, this comes from the assumption in (\ref{eq:free_surface_theta}) that $u^{n+1} \simeq u^*$. The correction method also suffers from dispersion, which is expected.
+
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=0.9\linewidth]{fig/timeseries_freesurface_projection_correction_20.png}
+			\caption{$\Delta t = T/20$. Timeseries of free surface height normalized by initial condition amplitude at $x/L=0$. Comparison of analytical solution to projection and correction methods for non-hydrostatic pressure calculation.}
+			\label{fig:timeseries_freesurface_projection_correction_20}
+		\end{center}
+	\end{figure}
+	
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=0.9\linewidth]{fig/timeseries_freesurface_projection_correction_80.png}
+			\caption{$\Delta t = T/80$. Timeseries of free surface height normalized by initial condition amplitude at $x/L=0$. Comparison of analytical solution to projection and correction methods for non-hydrostatic pressure calculation.}
+			\label{fig:timeseries_freesurface_projection_correction_80}
+		\end{center}
+	\end{figure}
+	
+Figures (\ref{fig:plot_accuracy_correction}) and (\ref{fig:plot_accuracy_projection}) show the accuracy of the correction and projection methods respectively. Error is computed as $(||f(\Delta t) - f(\Delta t / 2)||_2 )_{t=t_{\text{max}}}$, the relative error. The correction method is second order accurate in time. The projection method is first order accurate in time.
+
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=0.7\linewidth]{fig/plot_accuracy_correction.png}
+			\caption{Accuracy of correction method for non-hydrostatic pressure calculation}
+			\label{fig:plot_accuracy_correction}
+		\end{center}
+	\end{figure}
+	
+	\begin{figure}[htb]
+		\begin{center}
+			\includegraphics[width=0.7\linewidth]{fig/plot_accuracy_projection.png}
+			\caption{Accuracy of projection method for non-hydrostatic pressure calculation}
+			\label{fig:plot_accuracy_projection}
+		\end{center}
+	\end{figure}
 
 \end{document}
