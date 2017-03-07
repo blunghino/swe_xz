@@ -56,7 +56,7 @@ def snapshot_velocity_profiles(zc, D, Dz, u_list, w_list, labels, subplots):
             ls = '-'
         plt.plot(u_, zc_, 'r', ls=ls, lw=1.5, label="u, {}".format(labels[j]))
         plt.plot(w_, zf_, 'k', ls=ls, lw=1.5, label="w, {}".format(labels[j]))
-        plt.xlabel('Normalized Velocity')
+        plt.xlabel('Normalized Velocity Magnitude')
         plt.ylabel('z/D')
         plt.xlim(right=1.1)
     plt.legend(loc='upper left')

@@ -319,7 +319,7 @@ Starting with the bottom boundary condition $w_{i,0} = 0$ this system of equatio
 % q3
 \section{}
 
-Figure \ref{fig:timeseries_freesurface} shows the time evolution of the free surface comparing the theoretical 
+Figure \ref{fig:timeseries_freesurface} shows the time evolution of the free surface comparing the analytical result to the non-hydrostatic and hydrostatic numerical results. The comparison is considered for three domains with varying depth to length ratios: $D/L \in \{1, 1/4, 1/8\}$. For $D/L = 1$ the non-hydrostatic model result is out of phase with the analytical. The wavelength from the hydrostatic model is much shorter than the analytical. As $D/L$ decreases, the wavelength from the hydrostatic model increases and the non-hydrostatic phase shift decreases. For $D/L = 8$ the hydrostatic and non-hydrostatic model results both nearly match the analytical. The results of the hydrostatic model in particular are significantly improved because neglecting the non-hydrostatic pressure is a more appropriate assumption for the lower $D/L$ ratio, in which vertical velocities are small relative to horizontal.
 
 	\begin{figure}[htb]
 		\begin{center}
@@ -328,6 +328,8 @@ Figure \ref{fig:timeseries_freesurface} shows the time evolution of the free sur
 			\label{fig:timeseries_freesurface}
 		\end{center}
 	\end{figure}
+	
+Figure \ref{fig:snapshot_velocity_profiles} compares the vertical velocity profiles for the hydrostatic and non-hydrostatic models for the same three $D/L$ ratios. The hydrostatic profiles remain linear for all $D/L$ ratios. The u velocity is roughly constant with depth and the w velocity decreases from 1 at the surface to zero at the bottom. The non-hydrostatic profiles change significantly as $D/L$ varies. For $D/L = 1$ the velocity profiles for both u and w decrease non-linearly, with approximately 50\% of the velocity decrease occuring in the top 20\% of the water column. As $D/L$ is decreased the velocity profiles converge to roughly match the linear hydrostatic profiles (the w velocity converges first). This occurs because for lower $D/L$ the hydrostatic assumption is a more appropriate model for the physical characteristics of the problem.
 
 	\begin{figure}[htb]
 		\begin{center}
@@ -369,11 +371,11 @@ c_s = \sqrt{gD}
 % q5
 \section{}
 
-Figure \ref{fig:timeseries_freesurface_projection_correction_20} ($\Delta t = T/20$) and Figure \ref{fig:timeseries_freesurface_projection_correction_80} ($\Delta t = T/80$) compare the freesurface evolution of the projection and correction methods for the non-hydrostatic pressure field. The projection method has a lot of diffusion, for $\Delta t = T/20$ the diffusion takes the free surface fluctuations to essentially zero by about 5 wave periods. For $\Delta t = T/20$ the correction method also shows significant diffusion, this comes from the assumption in (\ref{eq:free_surface_theta}) that $u^{n+1} \simeq u^*$. The correction method also suffers from dispersion, which is expected.
+Figure \ref{fig:timeseries_freesurface_projection_correction_20} ($\Delta t = T/20$) and Figure \ref{fig:timeseries_freesurface_projection_correction_80} ($\Delta t = T/80$) compare the freesurface evolution of the projection and correction methods for the non-hydrostatic pressure field. The projection method has a lot of diffusion, for $\Delta t = T/20$ the diffusion takes the free surface fluctuations to essentially zero by about 5 wave periods. For $\Delta t = T/20$ the correction method also shows significant diffusion, this comes from the assumption in (\ref{eq:free_surface_theta}) that $u^{n+1}$ can be replaced by $u^*$. The correction method also suffers from dispersion, which is expected. For $\Delta t = T/20$ the numerical dispersion causes the phase of the free surface cosine wave shifts by over a half period over 10 wave periods. For $\Delta t = T/80$ the phase of the free surface cosine wave shifts by only a small fraction of a period.
 
 	\begin{figure}[htb]
 		\begin{center}
-			\includegraphics[width=0.9\linewidth]{fig/timeseries_freesurface_projection_correction_20.png}
+			\includegraphics[width=0.85\linewidth]{fig/timeseries_freesurface_projection_correction_20.png}
 			\caption{$\Delta t = T/20$. Timeseries of free surface height normalized by initial condition amplitude at $x/L=0$. Comparison of analytical solution to projection and correction methods for non-hydrostatic pressure calculation.}
 			\label{fig:timeseries_freesurface_projection_correction_20}
 		\end{center}
@@ -381,26 +383,27 @@ Figure \ref{fig:timeseries_freesurface_projection_correction_20} ($\Delta t = T/
 	
 	\begin{figure}[htb]
 		\begin{center}
-			\includegraphics[width=0.9\linewidth]{fig/timeseries_freesurface_projection_correction_80.png}
+			\includegraphics[width=0.85\linewidth]{fig/timeseries_freesurface_projection_correction_80.png}
 			\caption{$\Delta t = T/80$. Timeseries of free surface height normalized by initial condition amplitude at $x/L=0$. Comparison of analytical solution to projection and correction methods for non-hydrostatic pressure calculation.}
 			\label{fig:timeseries_freesurface_projection_correction_80}
 		\end{center}
 	\end{figure}
-	
-Figures (\ref{fig:plot_accuracy_correction}) and (\ref{fig:plot_accuracy_projection}) show the accuracy of the correction and projection methods respectively. Error is computed as $(||f(\Delta t) - f(\Delta t / 2)||_2 )_{t=t_{\text{max}}}$, the relative error. The correction method is second order accurate in time. The projection method is first order accurate in time.
+\FloatBarrier
+
+Figures (\ref{fig:plot_accuracy_correction}) and (\ref{fig:plot_accuracy_projection}) show the time accuracy of the correction and projection methods respectively. Error is computed as $(||f(\Delta t) - f(\Delta t / 2)||_2 )_{t=t_{\text{max}}}$, the relative error. The correction method is second order accurate in time. The projection method is first order accurate in time.
 
 	\begin{figure}[htb]
 		\begin{center}
-			\includegraphics[width=0.7\linewidth]{fig/plot_accuracy_correction.png}
-			\caption{Accuracy of correction method for non-hydrostatic pressure calculation}
+			\includegraphics[width=0.65\linewidth]{fig/plot_accuracy_correction.png}
+			\caption{Time accuracy of the correction method for non-hydrostatic pressure calculation}
 			\label{fig:plot_accuracy_correction}
 		\end{center}
 	\end{figure}
 	
 	\begin{figure}[htb]
 		\begin{center}
-			\includegraphics[width=0.7\linewidth]{fig/plot_accuracy_projection.png}
-			\caption{Accuracy of projection method for non-hydrostatic pressure calculation}
+			\includegraphics[width=0.65\linewidth]{fig/plot_accuracy_projection.png}
+			\caption{Time accuracy of the projection method for non-hydrostatic pressure calculation}
 			\label{fig:plot_accuracy_projection}
 		\end{center}
 	\end{figure}
